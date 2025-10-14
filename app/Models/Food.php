@@ -13,6 +13,8 @@ class Food extends Model
 
     protected $fillable = [
         'name',
+        'brand',
+        'category_id',
         'calories',
         'protein',
         'carbs',
@@ -62,5 +64,10 @@ class Food extends Model
             'fat' => $this->fat * $factor,
             'fiber' => $this->fiber ? $this->fiber * $factor : null,
         ];
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }

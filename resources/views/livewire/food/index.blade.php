@@ -94,6 +94,16 @@
                     <input type="text" wire:model="source" class="input input-bordered w-full" placeholder="Quelle eingeben">
                 </div>
 
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Kategorie</span></label>
+                    <select wire:model="category_id" class="select select-bordered w-full">
+                        <option value="">Keine Kategorie</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="col-span-2 flex justify-between mt-4">
                     <button type="submit" class="btn btn-primary">{{ $isEdit ? 'Aktualisieren' : 'Hinzufügen' }}</button>
                     @if($isEdit)

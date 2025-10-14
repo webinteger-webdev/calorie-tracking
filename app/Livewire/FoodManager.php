@@ -4,17 +4,18 @@ namespace App\Livewire;
 
 use Log;
 use App\Models\Food;
+use App\Models\Category;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
 class FoodManager extends Component
 {
-    public $debugMessage = '';
-
     public $foods;
+    public $categories = [];
     public $name;
     public $brand;
+    public $category_id;
     public $calories;
     public $protein = 0;
     public $carbs = 0;
@@ -27,7 +28,6 @@ class FoodManager extends Component
 
     public $search = '';
     public $suggestions = [];
-
     public $loading = false;
 
     protected $rules = [
@@ -39,21 +39,38 @@ class FoodManager extends Component
         'fiber' => 'nullable|numeric|min:0',
         'serving_unit' => 'required|string|max:50',
         'source' => 'nullable|string|max:255',
+        'category_id' => 'nullable|exists:categories,id',
     ];
 
     public function mount()
     {
+        $this->categories = Category::orderBy('name')->get();
         $this->loadFoods();
     }
 
     public function loadFoods()
     {
-        $this->foods = Food::orderBy('name')->get();
+        $this->foods = Food::with('category')->orderBy('name')->get();
     }
 
     public function resetForm()
     {
-        $this->reset(['name', 'brand', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'serving_unit', 'source', 'foodId', 'isEdit', 'search', 'suggestions']);
+        $this->reset([
+            'name',
+            'brand',
+            'category_id',
+            'calories',
+            'protein',
+            'carbs',
+            'fat',
+            'fiber',
+            'serving_unit',
+            'source',
+            'foodId',
+            'isEdit',
+            'search',
+            'suggestions'
+        ]);
         $this->serving_unit = 'g';
     }
 
@@ -61,32 +78,25 @@ class FoodManager extends Component
     {
         $this->validate();
 
+        $data = [
+            'name' => $this->name,
+            'brand' => $this->brand,
+            'category_id' => $this->category_id,
+            'calories' => $this->calories,
+            'protein' => $this->protein,
+            'carbs' => $this->carbs,
+            'fat' => $this->fat,
+            'fiber' => $this->fiber,
+            'serving_unit' => $this->serving_unit,
+            'source' => $this->source ?? 'manual',
+        ];
+
         if ($this->isEdit) {
             $food = Food::findOrFail($this->foodId);
-            $food->update([
-                'name' => $this->name,
-                'brand' => $this->brand,
-                'calories' => $this->calories,
-                'protein' => $this->protein,
-                'carbs' => $this->carbs,
-                'fat' => $this->fat,
-                'fiber' => $this->fiber,
-                'serving_unit' => $this->serving_unit,
-                'source' => $this->source,
-            ]);
+            $food->update($data);
         } else {
-            Food::create([
-                'name' => $this->name,
-                'brand' => $this->brand,
-                'calories' => $this->calories,
-                'protein' => $this->protein,
-                'carbs' => $this->carbs,
-                'fat' => $this->fat,
-                'fiber' => $this->fiber,
-                'serving_unit' => $this->serving_unit,
-                'source' => $this->source ?? 'manual',
-                'created_by' => Auth::id(),
-            ]);
+            $data['created_by'] = Auth::id();
+            Food::create($data);
         }
 
         $this->resetForm();
@@ -102,6 +112,7 @@ class FoodManager extends Component
         $this->foodId = $food->id;
         $this->name = $food->name;
         $this->brand = $food->brand;
+        $this->category_id = $food->category_id;
         $this->calories = $food->calories;
         $this->protein = $food->protein;
         $this->carbs = $food->carbs;
@@ -128,7 +139,7 @@ class FoodManager extends Component
             return;
         }
 
-        $this->loading = true; // Loading starten
+        $this->loading = true;
 
         try {
             $response = Http::get('https://world.openfoodfacts.org/cgi/search.pl', [
@@ -139,8 +150,9 @@ class FoodManager extends Component
                 'page_size' => 5,
             ]);
         } catch (\Exception $e) {
-            \Log::error('OF request failed: ' . $e->getMessage());
+            Log::error('OF request failed: ' . $e->getMessage());
             $this->suggestions = [];
+            $this->loading = false;
             return;
         }
 
@@ -154,25 +166,23 @@ class FoodManager extends Component
                 'protein' => $p['nutriments']['proteins_100g'] ?? 0,
                 'carbs' => $p['nutriments']['carbohydrates_100g'] ?? 0,
                 'fat' => $p['nutriments']['fat_100g'] ?? 0,
-                'fiber' => $p['nutriments']['fiber_100g'] ?? null,
+                'fiber' => $p['nutriments']['fiber_100g'] ?? 0,
             ])->toArray();
         }
 
-        $this->loading = false; // Loading beenden
+        $this->loading = false;
     }
-
 
     public function selectSuggestion($index)
     {
         $item = $this->suggestions[$index] ?? null;
         if (!$item) return;
 
-        // Vorschläge zuerst leeren
         $this->suggestions = [];
 
-        // Werte übernehmen
         $this->name = $item['name'];
         $this->brand = $item['brand'];
+        $this->category_id = null; // Optional: manuell auswählen
         $this->serving_unit = $item['serving_unit'] ?? '100g';
         $this->calories = $item['calories'] ?? 0;
         $this->protein = $item['protein'] ?? 0;
@@ -184,9 +194,10 @@ class FoodManager extends Component
         $this->search = '';
     }
 
-
     public function render()
     {
-        return view('livewire.food.index');
+        return view('livewire.food.index', [
+            'categories' => $this->categories,
+        ]);
     }
 }
