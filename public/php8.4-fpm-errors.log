@@ -1,0 +1,1 @@
+[07-Oct-2025 07:39:09 UTC] PHP Deprecated:  WorkOS\UserManagement::getLogoutUrl(): Implicitly marking parameter $return_to as nullable is deprecated, the explicit nullable type must be used instead in /home/rwd/webprojects/calorie-tracker/vendor/workos/workos-php/lib/UserManagement.php on line 1294
