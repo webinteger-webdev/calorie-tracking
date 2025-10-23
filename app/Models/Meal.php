@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Meal extends Model
 {
@@ -65,32 +66,33 @@ class Meal extends Model
 
     public function updateTotals()
     {
-        $totalCalories = 0;
-        $totalProtein = 0;
-        $totalCarbs = 0;
-        $totalFat = 0;
-
-        foreach ($this->foods as $food) {
-            $nutrients = $food->calculateNutrientsForAmount($food->pivot->amount_g);
-            $totalCalories += $nutrients['calories'];
-            $totalProtein += $nutrients['protein'];
-            $totalCarbs += $nutrients['carbs'];
-            $totalFat += $nutrients['fat'];
-        }
-
-        foreach ($this->recipes as $recipe) {
-            $nutrients = $recipe->calculateNutrientsForAmount($recipe->pivot->amount_g);
-            $totalCalories += $nutrients['calories'];
-            $totalProtein += $nutrients['protein'];
-            $totalCarbs += $nutrients['carbs'];
-            $totalFat += $nutrients['fat'];
-        }
-
-        $this->update([
-            'total_calories' => $totalCalories,
-            'total_protein' => $totalProtein,
-            'total_carbs' => $totalCarbs,
-            'total_fat' => $totalFat,
-        ]);
+        $cacheKey = "meal_totals_{$this->id}";
+        $totals = Cache::remember($cacheKey, now()->addHours(1), function () {
+            $totalCalories = 0;
+            $totalProtein = 0;
+            $totalCarbs = 0;
+            $totalFat = 0;
+            foreach ($this->foods as $food) {
+                $nutrients = $food->calculateNutrientsForAmount($food->pivot->amount_g);
+                $totalCalories += $nutrients['calories'];
+                $totalProtein += $nutrients['protein'];
+                $totalCarbs += $nutrients['carbs'];
+                $totalFat += $nutrients['fat'];
+            }
+            foreach ($this->recipes as $recipe) {
+                $nutrients = $recipe->calculateNutrientsForAmount($recipe->pivot->amount_g);
+                $totalCalories += $nutrients['calories'];
+                $totalProtein += $nutrients['protein'];
+                $totalCarbs += $nutrients['carbs'];
+                $totalFat += $nutrients['fat'];
+            }
+            return [
+                'total_calories' => $totalCalories,
+                'total_protein' => $totalProtein,
+                'total_carbs' => $totalCarbs,
+                'total_fat' => $totalFat,
+            ];
+        });
+        $this->update($totals);
     }
 }

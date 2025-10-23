@@ -1,15 +1,16 @@
 @props([
-    'type' =>'text',
+    'type' => 'text',
+    'id' => '',
     'name' => '',
     'label' => '',
     'description' => '',
     'variant' => '',
     'size' => '',
-    'errors' => []
+    'errors' => [],
+    'icon' => null, // Проп для имени иконки
 ])
 
 @push('tailwindcss-safelist')
-
 <div class="
     input
     input-ghost
@@ -28,7 +29,6 @@
     input-xl
     ">
 </div>
-
 @endpush
 
 @if(!empty($label) || !empty($legend))
@@ -39,12 +39,25 @@
     <legend class="fieldset-legend {{ (!empty($errors) && $errors->has($name)) ? ' text-error' : '' }}">{{ $label }}</legend>
 @endif
 
-    <input type="{{ $type }}" {{ $attributes->merge([
-        'class' => 'input w-full' . 
-            (!empty($variant) ? " input-{$variant}" : '') .
-            (!empty($size) ? " input-{$size}" : '') .
-            (!empty($errors) && $errors->has($name) ? ' input-error' : '')
-    ]) }} {{ $attributes }} />    
+<div class="relative">
+    <input
+        type="{{ $type }}"
+        id="{{ $id }}"
+        name="{{ $name }}"
+        {{ $attributes->merge([
+            'class' => 'input w-full' . (!empty($icon) ? ' pl-10' : '') .
+                (!empty($variant) ? " input-{$variant}" : '') .
+                (!empty($size) ? " input-{$size}" : '') .
+                (!empty($errors) && $errors->has($name) ? ' input-error' : '')
+        ]) }}
+        {{ $attributes->whereDoesntStartWith('class') }}
+    />
+    @if($icon)
+        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <x-daisyui.icon name="{{ $icon }}" class="h-5 w-5 text-gray-400" />
+        </div>
+    @endif
+</div>
 
 @if(!empty($description))
     <p class="fieldset-label">{{ $description }}</p>

@@ -10,6 +10,7 @@ return new class extends Migration {
         Schema::create('foods', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->index('name');
             $table->integer('calories');
             $table->decimal('protein', 8, 2)->default(0);
             $table->decimal('carbs', 8, 2)->default(0);
@@ -17,6 +18,7 @@ return new class extends Migration {
             $table->decimal('fiber', 8, 2)->nullable();
             $table->string('serving_unit')->default('g');
             $table->string('source')->nullable();
+            $table->string('openfoodfacts_id')->nullable()->unique();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });

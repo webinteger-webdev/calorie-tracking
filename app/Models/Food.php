@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use GuzzleHttp\Client;
 
 class Food extends Model
 {
@@ -46,12 +47,16 @@ class Food extends Model
     }
 
     // Abfragen
-    public static function search($query)
+    public static function search($query, $categoryId = null, $brand = null)
     {
-        return self::where('name', 'like', "%{$query}%")
-            ->orderBy('name')
-            ->limit(10)
-            ->get();
+        $foods = self::where('name', 'like', "%{$query}%");
+        if ($categoryId) {
+            $foods->where('category_id', $categoryId);
+        }
+        if ($brand) {
+            $foods->where('brand', 'like', "%{$brand}%");
+        }
+        return $foods->orderBy('name')->limit(10)->get();
     }
 
     public function calculateNutrientsForAmount($amountG)
@@ -69,5 +74,29 @@ class Food extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public static function fetchFromOpenFoodFacts($openfoodfactsId)
+    {
+        $client = new Client();
+        $response = $client->get("https://world.openfoodfacts.org/api/v0/product/{$openfoodfactsId}.json");
+        $data = json_decode($response->getBody(), true);
+
+        if (isset($data['product'])) {
+            return self::updateOrCreate(
+                ['openfoodfacts_id' => $openfoodfactsId],
+                [
+                    'name' => $data['product']['product_name'] ?? 'Unknown',
+                    'calories' => $data['product']['nutriments']['energy-kcal_100g'] ?? 0,
+                    'protein' => $data['product']['nutriments']['proteins_100g'] ?? 0,
+                    'carbs' => $data['product']['nutriments']['carbohydrates_100g'] ?? 0,
+                    'fat' => $data['product']['nutriments']['fat_100g'] ?? 0,
+                    'fiber' => $data['product']['nutriments']['fiber_100g'] ?? null,
+                    'serving_unit' => 'g',
+                    'source' => 'Open Food Facts',
+                ]
+            );
+        }
+        return null;
     }
 }

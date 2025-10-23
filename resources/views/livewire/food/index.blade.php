@@ -1,14 +1,18 @@
-<div class="max-w-7xl mx-auto p-6">
+<div>
 
-    <h1 class="text-2xl font-bold mb-6">Lebensmittel-Datenbank</h1>
+    <x-daisyui.heading level="1" size="xl">Lebensmittel-Datenbank</x-daisyui.heading>
+    <x-daisyui.heading level="1" size="sm" type="sub">Lebensmittel Verwaltung mit API Abfragen</x-daisyui.heading>
+    <x-daisyui.separator/>
+
 
     @if (session()->has('message'))
         <div class="alert alert-success mb-4">{{ session('message') }}</div>
     @endif
 
-    <div class="card bg-base-100 shadow mb-6">
-        <div class="card-body overflow-visible">
-            <div class="mb-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
+    <div class="text-base-content [&>.card]:bg-base-200 lg:gap-6 mx-auto [&>*]:mb-6 [&>*]:break-inside-avoid [&_:is(div,button)]:[transition:background-color_0ms,border-color_100ms,box-shadow_300ms,border-radius_500ms_ease-out]">
+    <div class="card card-border border-base-300 card-sm">
+        <div class="card-body gap-4 overflow-visible">
+            <div class="mb-2 p-2 bg-yellow-100 border border-yellow-300 dark:bg-gray-700 dark:border-gray-900 rounded">
                 <p><strong>DEBUG:</strong></p>
                 <p>Search: {{ $search }}</p>
                 <p>Suggestions: {{ json_encode($suggestions) }}</p>
@@ -18,10 +22,23 @@
             <div class="grid grid-cols-2 gap-4">
                 <!-- Name + Suche -->
                 <div class="form-control mb-4 relative">
-                    <label class="label"><span class="label-text">Lebensmittel Suche</span></label>
-                    <input type="text" wire:model.live.debounce.300ms="search" 
-                           placeholder="Lebensmittel suchen..." 
-                           class="input input-bordered w-full" />
+
+
+
+                        <x-daisyui.input id="api-search" name="api-search" wire:model.live.debounce.300ms="search"
+                            label="Lebensmittel Suche"
+                           placeholder="Lebensmittel suchen..."
+                           class="input input-bordered w-full"
+                           icon="search"
+                            />
+
+
+
+                    {{-- <label class="label"><span class="label-text">Lebensmittel Suche</span></label>
+
+                    <input type="text" wire:model.live.debounce.300ms="search"
+                           placeholder="Lebensmittel suchen..."
+                           class="input input-bordered w-full" /> --}}
 
                     <!-- Ladeanimation -->
                     @if($loading)
@@ -45,10 +62,7 @@
                     @endif
                 </div>
 
-                <div class="form-control mb-4">
-                    <label class="label"><span class="label-text">Lebensmittel Name</span></label>
-                    <input type="text" wire:model="name" placeholder="Lebensmittel Name..." class="input input-bordered w-full" />
-                </div>
+                <x-daisyui.input id="name" name="name" wire:model="name" label="Lebensmittel Name" placeholder="Lebensmittel Name..." class="input input-bordered w-full" />
             </div>
 
             <!-- Restliches Formular -->
@@ -146,4 +160,5 @@
         @endforeach
         </tbody>
     </table>
+    </div>
 </div>

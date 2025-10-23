@@ -25,7 +25,6 @@ class FoodManager extends Component
     public $source;
     public $foodId;
     public $isEdit = false;
-
     public $search = '';
     public $suggestions = [];
     public $loading = false;
@@ -77,7 +76,6 @@ class FoodManager extends Component
     public function save()
     {
         $this->validate();
-
         $data = [
             'name' => $this->name,
             'brand' => $this->brand,
@@ -101,14 +99,12 @@ class FoodManager extends Component
 
         $this->resetForm();
         $this->loadFoods();
-
         session()->flash('message', $this->isEdit ? 'Lebensmittel aktualisiert.' : 'Lebensmittel hinzugefügt.');
     }
 
     public function edit($id)
     {
         $food = Food::findOrFail($id);
-
         $this->foodId = $food->id;
         $this->name = $food->name;
         $this->brand = $food->brand;
@@ -120,7 +116,6 @@ class FoodManager extends Component
         $this->fiber = $food->fiber;
         $this->serving_unit = $food->serving_unit;
         $this->source = $food->source;
-
         $this->isEdit = true;
     }
 
@@ -131,7 +126,6 @@ class FoodManager extends Component
         session()->flash('message', 'Lebensmittel gelöscht.');
     }
 
-    // Live-Suche Open Food Facts
     public function updatedSearch()
     {
         if (strlen($this->search) < 3) {
@@ -146,28 +140,35 @@ class FoodManager extends Component
                 'search_terms' => $this->search,
                 'search_simple' => 1,
                 'json' => 1,
-                'fields' => 'product_name,brands,nutriments,serving_size',
+                'fields' => 'product_name,brands,nutriments,serving_size,id',
                 'page_size' => 5,
             ]);
+
+            if ($response->failed()) {
+                session()->flash('error', 'Fehler beim Abrufen der Daten von Open Food Facts.');
+                $this->suggestions = [];
+                $this->loading = false;
+                return;
+            }
+
+            $products = $response->json()['products'] ?? [];
+            $this->suggestions = collect($products)->map(function ($p) {
+                return [
+                    'id' => $p['id'] ?? null,
+                    'name' => $p['product_name'] ?? '',
+                    'brand' => $p['brands'] ?? '',
+                    'serving_unit' => $p['serving_size'] ?? '100g',
+                    'calories' => $p['nutriments']['energy-kcal_100g'] ?? 0,
+                    'protein' => $p['nutriments']['proteins_100g'] ?? 0,
+                    'carbs' => $p['nutriments']['carbohydrates_100g'] ?? 0,
+                    'fat' => $p['nutriments']['fat_100g'] ?? 0,
+                    'fiber' => $p['nutriments']['fiber_100g'] ?? 0,
+                ];
+            })->toArray();
         } catch (\Exception $e) {
             Log::error('OF request failed: ' . $e->getMessage());
+            session()->flash('error', 'Netzwerkfehler. Bitte versuchen Sie es später erneut.');
             $this->suggestions = [];
-            $this->loading = false;
-            return;
-        }
-
-        if ($response->ok()) {
-            $products = $response->json()['products'] ?? [];
-            $this->suggestions = collect($products)->map(fn($p) => [
-                'name' => $p['product_name'] ?? '',
-                'brand' => $p['brands'] ?? '',
-                'serving_unit' => $p['serving_size'] ?? '100g',
-                'calories' => $p['nutriments']['energy-kcal_100g'] ?? 0,
-                'protein' => $p['nutriments']['proteins_100g'] ?? 0,
-                'carbs' => $p['nutriments']['carbohydrates_100g'] ?? 0,
-                'fat' => $p['nutriments']['fat_100g'] ?? 0,
-                'fiber' => $p['nutriments']['fiber_100g'] ?? 0,
-            ])->toArray();
         }
 
         $this->loading = false;
@@ -178,20 +179,18 @@ class FoodManager extends Component
         $item = $this->suggestions[$index] ?? null;
         if (!$item) return;
 
-        $this->suggestions = [];
+        $openfoodfactsId = $item['id'] ?? null;
+        if ($openfoodfactsId) {
+            $food = Food::fetchFromOpenFoodFacts($openfoodfactsId);
+            if ($food) {
+                session()->flash('message', 'Produkt erfolgreich aus Open Food Facts importiert!');
+                $this->loadFoods();
+                $this->resetForm();
+                return;
+            }
+        }
 
-        $this->name = $item['name'];
-        $this->brand = $item['brand'];
-        $this->category_id = null; // Optional: manuell auswählen
-        $this->serving_unit = $item['serving_unit'] ?? '100g';
-        $this->calories = $item['calories'] ?? 0;
-        $this->protein = $item['protein'] ?? 0;
-        $this->carbs = $item['carbs'] ?? 0;
-        $this->fat = $item['fat'] ?? 0;
-        $this->fiber = $item['fiber'] ?? 0;
-        $this->source = 'openfoodfacts';
-
-        $this->search = '';
+        session()->flash('error', 'Fehler beim Importieren des Produkts.');
     }
 
     public function render()

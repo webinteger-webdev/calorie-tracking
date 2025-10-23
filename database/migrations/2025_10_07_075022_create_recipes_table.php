@@ -10,6 +10,7 @@ return new class extends Migration {
         Schema::create('recipes', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->index('name');
             $table->text('description')->nullable();
             $table->integer('servings')->default(1);
             $table->integer('calories_per_serving');

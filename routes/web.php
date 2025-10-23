@@ -19,7 +19,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
-    Route::get('foods', FoodManager::class)->name('foods');
+    // Route::get('foods', FoodManager::class)->name('foods');
 });
 
 require __DIR__ . '/auth.php';

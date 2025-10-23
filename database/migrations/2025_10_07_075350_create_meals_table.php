@@ -12,6 +12,7 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->enum('type', ['breakfast', 'lunch', 'dinner', 'snack']);
             $table->date('date');
+            $table->time('time')->nullable();
             $table->integer('total_calories')->default(0);
             $table->decimal('total_protein', 8, 2)->default(0);
             $table->decimal('total_carbs', 8, 2)->default(0);
