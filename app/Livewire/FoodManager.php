@@ -17,9 +17,9 @@ class FoodManager extends Component
     public $brand;
     public $category_id;
     public $calories;
-    public $protein = 0;
-    public $carbs = 0;
-    public $fat = 0;
+    public $protein;
+    public $carbs;
+    public $fat;
     public $fiber;
     public $serving_unit = 'g';
     public $source;
@@ -28,6 +28,10 @@ class FoodManager extends Component
     public $search = '';
     public $suggestions = [];
     public $loading = false;
+
+    public $userInputName = '';
+    public $showAddCategoryModal = false;
+    public $newCategoryName = '';
 
     protected $rules = [
         'name' => 'required|string|max:255',
@@ -43,7 +47,13 @@ class FoodManager extends Component
 
     public function mount()
     {
-        $this->categories = Category::orderBy('name')->get();
+        $this->categories = Category::orderBy('name')->get()->map(function ($category) {
+            return [
+                'id' => $category->id,
+                'name' => $category->name,
+            ];
+        })->toArray();
+
         $this->loadFoods();
     }
 
@@ -73,9 +83,39 @@ class FoodManager extends Component
         $this->serving_unit = 'g';
     }
 
+    // public function save()
+    // {
+    //     $this->validate();
+    //     $data = [
+    //         'name' => $this->name,
+    //         'brand' => $this->brand,
+    //         'category_id' => $this->category_id,
+    //         'calories' => $this->calories,
+    //         'protein' => $this->protein,
+    //         'carbs' => $this->carbs,
+    //         'fat' => $this->fat,
+    //         'fiber' => $this->fiber,
+    //         'serving_unit' => $this->serving_unit,
+    //         'source' => $this->source ?? 'manual',
+    //     ];
+
+    //     if ($this->isEdit) {
+    //         $food = Food::findOrFail($this->foodId);
+    //         $food->update($data);
+    //     } else {
+    //         $data['created_by'] = Auth::id();
+    //         Food::create($data);
+    //     }
+
+    //     $this->resetForm();
+    //     $this->loadFoods();
+    //     session()->flash('message', $this->isEdit ? 'Lebensmittel aktualisiert.' : 'Lebensmittel hinzugefügt.');
+    // }
+
     public function save()
     {
         $this->validate();
+
         $data = [
             'name' => $this->name,
             'brand' => $this->brand,
@@ -102,6 +142,7 @@ class FoodManager extends Component
         session()->flash('message', $this->isEdit ? 'Lebensmittel aktualisiert.' : 'Lebensmittel hinzugefügt.');
     }
 
+
     public function edit($id)
     {
         $food = Food::findOrFail($id);
@@ -126,18 +167,17 @@ class FoodManager extends Component
         session()->flash('message', 'Lebensmittel gelöscht.');
     }
 
-    public function updatedSearch()
+    public function updatedSearch($value)
     {
-        if (strlen($this->search) < 3) {
+        $this->userInputName = $value;
+        if (strlen($value) < 3) {
             $this->suggestions = [];
             return;
         }
-
         $this->loading = true;
-
         try {
             $response = Http::get('https://world.openfoodfacts.org/cgi/search.pl', [
-                'search_terms' => $this->search,
+                'search_terms' => $value,
                 'search_simple' => 1,
                 'json' => 1,
                 'fields' => 'product_name,brands,nutriments,serving_size,id',
@@ -155,7 +195,7 @@ class FoodManager extends Component
             $this->suggestions = collect($products)->map(function ($p) {
                 return [
                     'id' => $p['id'] ?? null,
-                    'name' => $p['product_name'] ?? '',
+                    'name' => $p['product_name'] ?? $this->search,
                     'brand' => $p['brands'] ?? '',
                     'serving_unit' => $p['serving_size'] ?? '100g',
                     'calories' => $p['nutriments']['energy-kcal_100g'] ?? 0,
@@ -170,28 +210,85 @@ class FoodManager extends Component
             session()->flash('error', 'Netzwerkfehler. Bitte versuchen Sie es später erneut.');
             $this->suggestions = [];
         }
-
         $this->loading = false;
     }
+
+    // public function selectSuggestion($index)
+    // {
+    //     $item = $this->suggestions[$index] ?? null;
+    //     if (!$item) return;
+
+    //     $openfoodfactsId = $item['id'] ?? null;
+    //     if ($openfoodfactsId) {
+    //         $food = Food::fetchFromOpenFoodFacts($openfoodfactsId, $this->search);
+    //         if ($food) {
+    //             session()->flash('message', 'Produkt erfolgreich aus Open Food Facts importiert!');
+    //             $this->loadFoods();
+    //             $this->resetForm();
+    //             return;
+    //         }
+    //     }
+    //     session()->flash('error', 'Fehler beim Importieren des Produkts.');
+    // }
 
     public function selectSuggestion($index)
     {
         $item = $this->suggestions[$index] ?? null;
         if (!$item) return;
 
-        $openfoodfactsId = $item['id'] ?? null;
-        if ($openfoodfactsId) {
-            $food = Food::fetchFromOpenFoodFacts($openfoodfactsId);
-            if ($food) {
-                session()->flash('message', 'Produkt erfolgreich aus Open Food Facts importiert!');
-                $this->loadFoods();
-                $this->resetForm();
-                return;
-            }
-        }
+        $this->name = $item['name'];
+        $this->brand = $item['brand'];
+        $this->calories = $item['calories'];
+        $this->protein = $item['protein'];
+        $this->carbs = $item['carbs'];
+        $this->fat = $item['fat'];
+        $this->fiber = $item['fiber'];
+        $this->serving_unit = $item['serving_unit'];
+        $this->source = 'Open Food Facts';
+        $this->isEdit = false;
 
-        session()->flash('error', 'Fehler beim Importieren des Produkts.');
+        // Закрываем выпадающий список
+        $this->suggestions = [];
     }
+
+    public function openAddCategoryModal()
+    {
+        $this->showAddCategoryModal = true;
+    }
+
+    public function closeAddCategoryModal()
+    {
+        $this->showAddCategoryModal = false;
+        $this->newCategoryName = '';
+    }
+
+    public function addCategory()
+    {
+        $this->validate([
+            'newCategoryName' => 'required|string|max:255|unique:categories,name',
+        ]);
+
+        try {
+            $category = Category::create([
+                'name' => $this->newCategoryName,
+            ]);
+
+            $this->categories = Category::orderBy('name')->get()->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                ];
+            })->toArray();
+
+            $this->category_id = $category->id;
+            $this->closeAddCategoryModal();
+            session()->flash('message', 'Kategorie erfolgreich hinzugefügt!');
+        } catch (\Exception $e) {
+            Log::error('Error adding category: ' . $e->getMessage());
+            session()->flash('error', 'Fehler beim Hinzufügen der Kategorie.');
+        }
+    }
+
 
     public function render()
     {

@@ -1,12 +1,21 @@
 <div>
 
-    <x-daisyui.heading level="1" size="xl">Lebensmittel-Datenbank</x-daisyui.heading>
+    <x-daisyui.heading level="1" size="xl">
+        <div class="flex items-center gap-2 mb-2">
+            <x-daisyui.icon name="beef" class="h-6 w-6 text-primary mr-1"/>
+            Lebensmittel-Datenbank
+        </div>
+    </x-daisyui.heading>
     <x-daisyui.heading level="1" size="sm" type="sub">Lebensmittel Verwaltung mit API Abfragen</x-daisyui.heading>
     <x-daisyui.separator/>
 
-
     @if (session()->has('message'))
-        <div class="alert alert-success mb-4">{{ session('message') }}</div>
+        <x-daisyui.toast
+            message="{{ session('message') }}"
+            type="success"
+            icon="info"
+            duration="3000"
+        />
     @endif
 
     <div class="text-base-content [&>.card]:bg-base-200 lg:gap-6 mx-auto [&>*]:mb-6 [&>*]:break-inside-avoid [&_:is(div,button)]:[transition:background-color_0ms,border-color_100ms,box-shadow_300ms,border-radius_500ms_ease-out]">
@@ -22,23 +31,12 @@
             <div class="grid grid-cols-2 gap-4">
                 <!-- Name + Suche -->
                 <div class="form-control mb-4 relative">
-
-
-
-                        <x-daisyui.input id="api-search" name="api-search" wire:model.live.debounce.300ms="search"
-                            label="Lebensmittel Suche"
-                           placeholder="Lebensmittel suchen..."
-                           class="input input-bordered w-full"
-                           icon="search"
-                            />
-
-
-
-                    {{-- <label class="label"><span class="label-text">Lebensmittel Suche</span></label>
-
-                    <input type="text" wire:model.live.debounce.300ms="search"
-                           placeholder="Lebensmittel suchen..."
-                           class="input input-bordered w-full" /> --}}
+                    <x-daisyui.input id="api-search" name="api-search" wire:model.live.debounce.300ms="search"
+                        label="Lebensmittel Suche"
+                        placeholder="Lebensmittel suchen..."
+                        class="input input-bordered w-full"
+                        icon="search"
+                        />
 
                     <!-- Ladeanimation -->
                     @if($loading)
@@ -67,55 +65,36 @@
 
             <!-- Restliches Formular -->
             <form wire:submit.prevent="save" class="grid grid-cols-2 gap-4">
+                <x-daisyui.input type="number" step="1" id="calories" name="calories" wire:model="calories" label="Kalorien (kcal)" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Kalorien (kcal)</span></label>
-                    <input type="number" wire:model="calories" class="input input-bordered w-full">
-                </div>
+                <x-daisyui.input type="number" step="0.01" id="carbs" name="carbs" wire:model="carbs" label="Kohlenhydrate (g)" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Protein (g)</span></label>
-                    <input type="number" step="0.01" wire:model="protein" class="input input-bordered w-full">
-                </div>
+                <x-daisyui.input type="number" step="0.01" id="protein" name="protein" wire:model="protein" label="Protein (g)" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Kohlenhydrate (g)</span></label>
-                    <input type="number" step="0.01" wire:model="carbs" class="input input-bordered w-full">
-                </div>
+                <x-daisyui.input type="number" step="0.01" id="fat" name="fat" wire:model="fat" label="Fett (g)" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Fett (g)</span></label>
-                    <input type="number" step="0.01" wire:model="fat" class="input input-bordered w-full">
-                </div>
+                <x-daisyui.input type="number" step="0.01" id="fiber" name="fiber" wire:model="fiber" label="Ballaststoffe (g)" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Ballaststoffe (g)</span></label>
-                    <input type="number" step="0.01" wire:model="fiber" class="input input-bordered w-full">
-                </div>
+                <x-daisyui.input id="brand" name="brand" wire:model="brand" label="Marke" placeholder="Marke eingeben" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Marke</span></label>
-                    <input type="text" wire:model="brand" class="input input-bordered w-full" placeholder="Marke eingeben">
-                </div>
+                <x-daisyui.input id="serving-unit" name="serving-unit" wire:model="serving_unit" label="Menge" description="z.B. 100g, 1 Stück" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Menge</span></label>
-                    <input type="text" wire:model="serving_unit" class="input input-bordered w-full" placeholder="z.B. 100g, 1 Stück">
-                </div>
+                <x-daisyui.input id="source" name="source" wire:model="source" label="Menge" placeholder="Quelle eingeben" description="z.B. Open Food Facts" class="input input-bordered w-full" />
 
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Quelle</span></label>
-                    <input type="text" wire:model="source" class="input input-bordered w-full" placeholder="Quelle eingeben">
-                </div>
-
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Kategorie</span></label>
-                    <select wire:model="category_id" class="select select-bordered w-full">
-                        <option value="">Keine Kategorie</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
-                    </select>
+                <div class="col-span-2 flex items-center gap-2">
+                    <x-daisyui.select
+                        name="category_id"
+                        label="Kategorie"
+                        placeholder="Keine Kategorie"
+                        :options="$categories"
+                        optionValue="id"
+                        optionLabel="name"
+                        selectClass="select-bordered w-full"
+                        wire:model="category_id"
+                    />
+                    <x-daisyui.button type="button" class="btn btn-sm btn-outline" wire:click="openAddCategoryModal">
+                        Kategorie hinzufügen
+                    </x-daisyui.button>
                 </div>
 
                 <div class="col-span-2 flex justify-between mt-4">
@@ -161,4 +140,17 @@
         </tbody>
     </table>
     </div>
+
+
+    <!-- Modal zum Hinzufügen einer neuen Kategorie -->
+    <x-daisyui.modal name="category" wire:model="showAddCategoryModal" title="Neue Kategorie hinzufügen">
+        <form wire:submit.prevent="addCategory" class="space-y-4">
+            <x-daisyui.input id="new-category-name" name="new-category-name" wire:model="newCategoryName" label="Kategoriename" placeholder="Name der Kategorie" class="input input-bordered w-full" />
+
+            <div class="modal-action">
+                <x-daisyui.button type="button" class="btn btn-ghost" wire:click="$set('showAddCategoryModal', false)">Abbrechen</x-daisyui.button>
+                <x-daisyui.button type="submit" class="btn btn-primary">Hinzufügen</x-daisyui.button>
+            </div>
+        </form>
+    </x-daisyui.modal>
 </div>
